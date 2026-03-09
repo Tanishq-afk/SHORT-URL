@@ -19,7 +19,11 @@ app.use(express.urlencoded({ extended: false }));
 app.use(cookieParser());
 
 // Connection
-connectToMongoDB("mongodb://localhost:27017/short-url").then(() => console.log("MongoDB Connected"));
+connectToMongoDB("mongodb://localhost:27017/short-url")
+    .then(() => console.log("MongoDB Connected"))
+    .catch((error) => {
+        console.error("MongoDB connection failed:", error.message);
+    });
 
 app.set("view engine", "ejs");
 app.set("views", path.resolve("./views"));

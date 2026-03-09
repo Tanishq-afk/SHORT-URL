@@ -1,0 +1,56 @@
+const { nanoid } = require("nanoid");
+const mongoose = require("mongoose");
+
+const URL = require("../models/url");
+
+async function handleGenerateShortURL(req, res) {
+    const shortID = nanoid(8);
+    const body = req.body;
+    if (!body.url) return res.status(400).json({ error: "url is required." });
+    await URL.create({
+        shortId: shortID,
+        redirectURL: body.url,
+        visitHistory: [],
+        createdBy: req.user._id,
+    });
+    const allUrls = await URL.find({ createdBy: req.user._id });
+    return res.render("home", {
+        id: shortID,
+        urls: allUrls,
+    });
+}
+
+async function handleRedirect(req, res) {
+    const { shortId } = req.params;
+
+    const entry = await URL.findOneAndUpdate(
+        { shortId },
+        {
+            $push: {
+                visitHistory: { timestamp: Date.now() },
+            },
+        },
+        { returnDocument: 'after' }
+    );
+
+    if (!entry) {
+        return res.status(404).send("Short URL not found");
+    }
+
+    return res.redirect(entry.redirectURL);
+}
+
+async function handleGetAnalytics(req, res) {
+    const shortId = req.params.shortId;
+    const result = await URL.findOne({ shortId });
+    return res.json({
+        totalClicks: result.visitHistory.length,
+        analytics: result.visitHistory,
+    });
+}
+
+module.exports = {
+    handleGenerateShortURL,
+    handleRedirect,
+    handleGetAnalytics,
+}
